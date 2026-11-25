@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:diagnova_ai/screens/splash_screen.dart';
 import 'package:diagnova_ai/screens/home_screen.dart';
-
+import 'package:diagnova_ai/screens//login_screen.dart';
 void main() {
   runApp(const DiagnovaApp());
 }
@@ -22,7 +22,7 @@ class DiagnovaApp extends StatelessWidget {
         ),
       ),
       home: SplashScreen(
-        nextScreen: const HomeScreen(),
+        nextScreen: const LoginScreen(),
       ),
     );
   }

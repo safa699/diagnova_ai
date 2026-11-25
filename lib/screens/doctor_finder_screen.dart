@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'appointment_booking_screen.dart';
+import 'package:diagnova_ai/screens/appointment_booking_screen.dart';
 
 const Color doctorNavy = Color(0xFF102A43);
 const Color doctorTeal = Color(0xFF087E8B);

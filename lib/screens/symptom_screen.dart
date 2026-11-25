@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:diagnova_ai/screens/assessment_result_screen.dart';
 

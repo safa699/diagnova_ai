@@ -1,6 +1,10 @@
+
 import 'package:flutter/material.dart';
+
 import 'package:diagnova_ai/screens/symptom_screen.dart';
 import 'package:diagnova_ai/screens/doctor_finder_screen.dart';
+import 'package:diagnova_ai/screens/my_appointments_screen.dart';
+import 'package:diagnova_ai/screens/medical_records_screen.dart';
 const Color diagnovaTeal = Color(0xFF087E8B);
 const Color diagnovaNavy = Color(0xFF102A43);
 const Color diagnovaBackground = Color(0xFFF6F9FC);
@@ -17,12 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> screens = const [
     DashboardScreen(),
-
-    const DoctorFinderScreen(),
-    SimpleScreen(
-      title: 'Medical Records',
-      icon: Icons.folder_open_rounded,
-    ),
+    DoctorFinderScreen(),
+    MedicalRecordsScreen(),
     SimpleScreen(
       title: 'My Profile',
       icon: Icons.person_rounded,
@@ -84,7 +84,7 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top App Bar
+          // App Header
           Row(
             children: [
               Container(
@@ -128,7 +128,9 @@ class DashboardScreen extends StatelessWidget {
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Notifications will be added soon.'),
+                      content: Text(
+                        'Notifications will be added soon.',
+                      ),
                     ),
                   );
                 },
@@ -297,7 +299,25 @@ class DashboardScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const DoctorFinderScreen(),
+                      builder: (context) =>
+                      const DoctorFinderScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              // My Appointments
+              ServiceCard(
+                title: 'My Appointments',
+                subtitle: 'View your bookings',
+                icon: Icons.event_available_rounded,
+                color: const Color(0xFF00A896),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                      const MyAppointmentsScreen(),
                     ),
                   );
                 },
@@ -309,11 +329,11 @@ class DashboardScreen extends StatelessWidget {
                 icon: Icons.folder_rounded,
                 color: const Color(0xFF00A896),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Medical Records feature is coming soon.',
-                      ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                      const MedicalRecordsScreen(),
                     ),
                   );
                 },
@@ -471,7 +491,7 @@ class ServiceCard extends StatelessWidget {
   }
 }
 
-// ---------------- SIMPLE PLACEHOLDER SCREENS ----------------
+// ---------------- PLACEHOLDER SCREENS ----------------
 
 class SimpleScreen extends StatelessWidget {
   final String title;

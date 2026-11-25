@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 const Color bookingTeal = Color(0xFF087E8B);
