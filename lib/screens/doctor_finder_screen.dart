@@ -1,0 +1,421 @@
+
+import 'package:flutter/material.dart';
+import 'appointment_booking_screen.dart';
+
+const Color doctorNavy = Color(0xFF102A43);
+const Color doctorTeal = Color(0xFF087E8B);
+const Color doctorBackground = Color(0xFFF6F9FC);
+
+class DoctorFinderScreen extends StatefulWidget {
+  const DoctorFinderScreen({super.key});
+
+  @override
+  State<DoctorFinderScreen> createState() =>
+      _DoctorFinderScreenState();
+}
+
+class _DoctorFinderScreenState
+    extends State<DoctorFinderScreen> {
+  final TextEditingController searchController =
+  TextEditingController();
+
+  String selectedSpecialty = 'All';
+
+  final List<Map<String, dynamic>> doctors = [
+    {
+      'name': 'Dr. Sarah Ahmed',
+      'specialty': 'General Physician',
+      'experience': '8 years experience',
+      'rating': '4.9',
+      'fee': '1500',
+      'image':
+      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
+    },
+    {
+      'name': 'Dr. Ali Hassan',
+      'specialty': 'Cardiologist',
+      'experience': '10 years experience',
+      'rating': '4.8',
+      'fee': '2500',
+      'image':
+      'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+    },
+    {
+      'name': 'Dr. Ayesha Khan',
+      'specialty': 'Dermatologist',
+      'experience': '6 years experience',
+      'rating': '4.7',
+      'fee': '2000',
+      'image':
+      'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400',
+    },
+    {
+      'name': 'Dr. Usman Malik',
+      'specialty': 'Neurologist',
+      'experience': '12 years experience',
+      'rating': '4.9',
+      'fee': '3000',
+      'image':
+      'https://images.unsplash.com/photo-1622253692010-333f2da6031b?w=400',
+    },
+  ];
+
+  final List<String> specialties = [
+    'All',
+    'General Physician',
+    'Cardiologist',
+    'Dermatologist',
+    'Neurologist',
+  ];
+
+  List<Map<String, dynamic>> get filteredDoctors {
+    return doctors.where((doctor) {
+      final name = doctor['name']
+          .toString()
+          .toLowerCase();
+
+      final specialty = doctor['specialty']
+          .toString()
+          .toLowerCase();
+
+      final search = searchController.text
+          .toLowerCase();
+
+      final matchesSearch =
+          name.contains(search) ||
+              specialty.contains(search);
+
+      final matchesSpecialty =
+          selectedSpecialty == 'All' ||
+              doctor['specialty'] == selectedSpecialty;
+
+      return matchesSearch && matchesSpecialty;
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: doctorBackground,
+      appBar: AppBar(
+        backgroundColor: doctorNavy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Find Doctors',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: doctorNavy,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Find the right doctor',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Book your appointment with trusted specialists.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextField(
+                    controller: searchController,
+                    onChanged: (value) {
+                      setState(() {});
+                    },
+                    style: const TextStyle(
+                      color: doctorNavy,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search doctor or specialty',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: doctorTeal,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius:
+                        BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            SizedBox(
+              height: 42,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                itemCount: specialties.length,
+                itemBuilder: (context, index) {
+                  final specialty = specialties[index];
+
+                  final isSelected =
+                      selectedSpecialty == specialty;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      right: 8,
+                    ),
+                    child: ChoiceChip(
+                      label: Text(specialty),
+                      selected: isSelected,
+                      selectedColor: doctorTeal,
+                      backgroundColor: Colors.white,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : doctorNavy,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedSpecialty = specialty;
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: filteredDoctors.isEmpty
+                  ? const Center(
+                child: Text(
+                  'No doctors found.',
+                  style: TextStyle(
+                    color: doctorNavy,
+                    fontSize: 16,
+                  ),
+                ),
+              )
+                  : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredDoctors.length,
+                itemBuilder: (context, index) {
+                  final doctor =
+                  filteredDoctors[index];
+
+                  return DoctorCard(
+                    doctor: doctor,
+                    onBook: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AppointmentBookingScreen(
+                                doctor: doctor,
+                              ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DoctorCard extends StatelessWidget {
+  final Map<String, dynamic> doctor;
+  final VoidCallback onBook;
+
+  const DoctorCard({
+    super.key,
+    required this.doctor,
+    required this.onBook,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: doctorNavy.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius:
+                BorderRadius.circular(15),
+                child: Image.network(
+                  doctor['image'].toString(),
+                  width: 85,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (context, error, stackTrace) {
+                    return Container(
+                      width: 85,
+                      height: 100,
+                      color: const Color(0xFFEAF3F5),
+                      child: const Icon(
+                        Icons.person,
+                        size: 45,
+                        color: doctorTeal,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doctor['name'].toString(),
+                      style: const TextStyle(
+                        color: doctorNavy,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      doctor['specialty'].toString(),
+                      style: const TextStyle(
+                        color: doctorTeal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      doctor['experience'].toString(),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          doctor['rating'].toString(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: doctorNavy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 15),
+
+          Row(
+            mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Rs. ${doctor['fee']}',
+                style: const TextStyle(
+                  color: doctorNavy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              ElevatedButton(
+                onPressed: onBook,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: doctorTeal,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Book Appointment',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
