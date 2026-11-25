@@ -1,8 +1,18 @@
+
 import 'package:flutter/material.dart';
-import 'package:diagnova_ai/screens/splash_screen.dart';
-import 'package:diagnova_ai/screens/home_screen.dart';
-import 'package:diagnova_ai/screens//login_screen.dart';
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const DiagnovaApp());
 }
 

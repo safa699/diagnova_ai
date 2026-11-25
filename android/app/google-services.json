@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "992775013308",
+    "project_id": "diagnova-ai-4ce7d",
+    "storage_bucket": "diagnova-ai-4ce7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992775013308:android:e334db64fbd2ea3b30e1b9",
+        "android_client_info": {
+          "package_name": "com.example.diagnova_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUVrBdXaqkxJsHz2uLBnreuOfupGkeDqI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

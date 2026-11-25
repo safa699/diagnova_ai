@@ -5,6 +5,8 @@ import 'package:diagnova_ai/screens/symptom_screen.dart';
 import 'package:diagnova_ai/screens/doctor_finder_screen.dart';
 import 'package:diagnova_ai/screens/my_appointments_screen.dart';
 import 'package:diagnova_ai/screens/medical_records_screen.dart';
+import 'package:diagnova_ai/screens/profile_screen.dart';
+import 'package:diagnova_ai/screens/notifications_screen.dart';
 const Color diagnovaTeal = Color(0xFF087E8B);
 const Color diagnovaNavy = Color(0xFF102A43);
 const Color diagnovaBackground = Color(0xFFF6F9FC);
@@ -23,10 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     DashboardScreen(),
     DoctorFinderScreen(),
     MedicalRecordsScreen(),
-    SimpleScreen(
-      title: 'My Profile',
-      icon: Icons.person_rounded,
-    ),
+    ProfileScreen(),
   ];
 
   @override
@@ -126,11 +125,10 @@ class DashboardScreen extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Notifications will be added soon.',
-                      ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen(),
                     ),
                   );
                 },
@@ -145,27 +143,7 @@ class DashboardScreen extends StatelessWidget {
 
           const SizedBox(height: 30),
 
-          // Welcome
-          const Text(
-            'Hello, Welcome! 👋',
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-              color: diagnovaNavy,
-            ),
-          ),
 
-          const SizedBox(height: 7),
-
-          const Text(
-            'Take care of your health with Diagnova.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-
-          const SizedBox(height: 25),
 
           // Health Assessment Card
           Container(

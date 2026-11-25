@@ -1,8 +1,14 @@
+
 plugins {
     id("com.android.application")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+
+    // Flutter Gradle Plugin
     id("dev.flutter.flutter-gradle-plugin")
+
+    // Google Services Plugin
+    id("com.google.gms.google-services")
 }
+
 
 android {
     namespace = "com.example.diagnova_ai"
