@@ -1,0 +1,16 @@
+fever,cough,headache,sore_throat,runny_nose,fatigue,nausea,body_pain,condition
+1,1,0,1,1,0,0,0,Common_Cold
+1,1,1,1,0,1,0,1,Flu_Like_Illness
+0,0,1,0,0,0,0,0,Migraine_Like
+0,0,0,0,1,0,0,0,Allergy_Like
+1,0,0,0,0,1,1,1,Stomach_Illness_Like
+0,1,0,1,1,0,0,0,Common_Cold
+1,1,1,0,0,1,0,1,Flu_Like_Illness
+0,0,1,0,0,1,0,0,Migraine_Like
+0,0,0,0,1,0,0,0,Allergy_Like
+1,0,0,0,0,1,1,0,Stomach_Illness_Like
+1,1,0,1,1,1,0,0,Common_Cold
+1,1,1,1,0,1,0,1,Flu_Like_Illness
+0,0,1,0,0,0,0,1,Migraine_Like
+0,0,0,0,1,0,0,0,Allergy_Like
+1,0,0,0,0,1,1,1,Stomach_Illness_Like

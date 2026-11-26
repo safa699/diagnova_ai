@@ -1,4 +1,9 @@
+
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:diagnova_ai/screens/assessment_result_screen.dart';
 
 const Color symptomNavy = Color(0xFF102A43);
@@ -51,8 +56,8 @@ class _SymptomScreenState extends State<SymptomScreen> {
       'icon': Icons.accessibility_new_rounded,
     },
     {
-      'name': 'Dizziness',
-      'icon': Icons.rotate_right_rounded,
+      'name': 'Runny Nose',
+      'icon': Icons.water_drop_rounded,
     },
   ];
 
@@ -129,7 +134,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               const Text(
                 'Let’s understand how you feel',
                 style: TextStyle(
@@ -152,7 +156,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               const SizedBox(height: 25),
 
-              // Age
               const Text(
                 'Your Age',
                 style: TextStyle(
@@ -184,7 +187,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               const SizedBox(height: 22),
 
-              // Gender
               const Text(
                 'Gender',
                 style: TextStyle(
@@ -198,23 +200,16 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               Row(
                 children: [
-                  Expanded(
-                    child: genderButton('Male'),
-                  ),
+                  Expanded(child: genderButton('Male')),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: genderButton('Female'),
-                  ),
+                  Expanded(child: genderButton('Female')),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: genderButton('Other'),
-                  ),
+                  Expanded(child: genderButton('Other')),
                 ],
               ),
 
               const SizedBox(height: 25),
 
-              // Symptoms
               const Text(
                 'Select Your Symptoms',
                 style: TextStyle(
@@ -313,7 +308,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               const SizedBox(height: 25),
 
-              // Duration
               const Text(
                 'How long have you had these symptoms?',
                 style: TextStyle(
@@ -364,7 +358,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               const SizedBox(height: 25),
 
-              // Severity
               const Text(
                 'Symptom Severity',
                 style: TextStyle(
@@ -388,7 +381,6 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
               const SizedBox(height: 30),
 
-              // Continue Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -512,7 +504,7 @@ class _SymptomScreenState extends State<SymptomScreen> {
 
 // ---------------- SYMPTOM REVIEW SCREEN ----------------
 
-class SymptomReviewScreen extends StatelessWidget {
+class SymptomReviewScreen extends StatefulWidget {
   final int age;
   final String gender;
   final List<String> symptoms;
@@ -527,6 +519,100 @@ class SymptomReviewScreen extends StatelessWidget {
     required this.duration,
     required this.severity,
   });
+
+  @override
+  State<SymptomReviewScreen> createState() =>
+      _SymptomReviewScreenState();
+}
+
+class _SymptomReviewScreenState
+    extends State<SymptomReviewScreen> {
+  bool isLoading = false;
+
+  Future<void> startAssessment() async {
+    if (isLoading) return;
+
+    setState(() => isLoading = true);
+
+    // Convert selected UI symptoms into the model's CSV features.
+    final Map<String, int> modelInput = {
+      'fever': widget.symptoms.contains('Fever') ? 1 : 0,
+      'cough': widget.symptoms.contains('Cough') ? 1 : 0,
+      'headache': widget.symptoms.contains('Headache') ? 1 : 0,
+      'sore_throat':
+      widget.symptoms.contains('Sore Throat') ? 1 : 0,
+      'runny_nose':
+      widget.symptoms.contains('Runny Nose') ? 1 : 0,
+      'fatigue': widget.symptoms.contains('Fatigue') ? 1 : 0,
+      'nausea': widget.symptoms.contains('Nausea') ? 1 : 0,
+      'body_pain': widget.symptoms.contains('Body Pain') ? 1 : 0,
+    };
+
+    try {
+      final response = await http
+          .post(
+        Uri.parse('http://10.0.2.2:5000/predict'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(modelInput),
+      )
+          .timeout(const Duration(seconds: 60));
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final result =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+        final String condition =
+            result['possible_condition']?.toString() ??
+                'Prediction unavailable';
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AssessmentResultScreen(
+              condition: condition,
+              confidence: 0.0,
+              symptoms: widget.symptoms,
+            ),
+          ),
+        );
+      } else {
+        final error =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+        _showMessage(
+          error['error']?.toString() ??
+              'Prediction request failed (${response.statusCode}).',
+        );
+      }
+    } on TimeoutException {
+      if (mounted) {
+        _showMessage(
+          'Server response timed out. Please try again.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage(
+          'Could not connect to Python server. '
+              'Make sure app.py is running.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -582,8 +668,8 @@ class SymptomReviewScreen extends StatelessWidget {
                 title: 'Personal Information',
                 icon: Icons.person_rounded,
                 children: [
-                  reviewRow('Age', '$age years'),
-                  reviewRow('Gender', gender),
+                  reviewRow('Age', '${widget.age} years'),
+                  reviewRow('Gender', widget.gender),
                 ],
               ),
 
@@ -596,7 +682,7 @@ class SymptomReviewScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: symptoms.map((symptom) {
+                    children: widget.symptoms.map((symptom) {
                       return Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -626,8 +712,8 @@ class SymptomReviewScreen extends StatelessWidget {
                 title: 'Symptom Details',
                 icon: Icons.access_time_rounded,
                 children: [
-                  reviewRow('Duration', duration),
-                  reviewRow('Severity', severity),
+                  reviewRow('Duration', widget.duration),
+                  reviewRow('Severity', widget.severity),
                 ],
               ),
 
@@ -667,19 +753,8 @@ class SymptomReviewScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AssessmentResultScreen(
-                              condition: 'Assessment Pending',
-                              confidence: 0.0,
-                              symptoms: symptoms,
-                            ),
-                      ),
-                    );
-                  },
+                  onPressed:
+                  isLoading ? null : startAssessment,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: symptomTeal,
                     foregroundColor: Colors.white,
@@ -690,8 +765,17 @@ class SymptomReviewScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  child: const Text(
-                    'Start Assessment',
+                  child: isLoading
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : const Text(
+                    'Get Prediction',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

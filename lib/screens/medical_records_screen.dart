@@ -1,9 +1,10 @@
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-const Color recordNavy = Color(0xFF102A43);
-const Color recordTeal = Color(0xFF087E8B);
-const Color recordBackground = Color(0xFFF6F9FC);
+const Color medicalNavy = Color(0xFF102A43);
+const Color medicalTeal = Color(0xFF087E8B);
+const Color medicalBackground = Color(0xFFF6F9FC);
 
 class MedicalRecordsScreen extends StatefulWidget {
   const MedicalRecordsScreen({super.key});
@@ -15,690 +16,973 @@ class MedicalRecordsScreen extends StatefulWidget {
 
 class _MedicalRecordsScreenState
     extends State<MedicalRecordsScreen> {
-  final Map<String, String> healthInfo = {
-    'Blood Group': 'Not Added',
-    'Allergies': 'Not Added',
-    'Medications': 'Not Added',
-    'Medical Conditions': 'Not Added',
-  };
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final List<Map<String, String>> records = [
-    {
-      'title': 'Blood Test Report',
-      'type': 'Laboratory Report',
-      'date': '12 Nov 2026',
-      'doctor': 'Not specified',
-      'notes': 'Demo record',
-    },
-    {
-      'title': 'General Checkup',
-      'type': 'Doctor Visit',
-      'date': '05 Oct 2026',
-      'doctor': 'Not specified',
-      'notes': 'Demo record',
-    },
-  ];
+  String get userId => FirebaseAuth.instance.currentUser!.uid;
 
-  // Edit personal health information
-  Future<void> editHealthInfo(String title) async {
-    final controller = TextEditingController(
-      text: healthInfo[title] == 'Not Added'
-          ? ''
-          : healthInfo[title],
-    );
+  DocumentReference<Map<String, dynamic>> get userDocument =>
+      _firestore.collection('users').doc(userId);
 
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text('Edit $title'),
-          content: TextField(
-            controller: controller,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Enter $title',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (controller.text.trim().isEmpty) {
-                  return;
-                }
-
-                setState(() {
-                  healthInfo[title] = controller.text.trim();
-                });
-
-                Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$title updated successfully'),
-                  ),
-                );
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-
-    controller.dispose();
-  }
-
-  // Add new medical record
-  Future<void> addRecord() async {
-    final titleController = TextEditingController();
-    final typeController = TextEditingController();
-    final doctorController = TextEditingController();
-    final notesController = TextEditingController();
-
-    DateTime selectedDate = DateTime.now();
-
-    String formattedDate =
-        '${selectedDate.day} ${_monthName(selectedDate.month)} '
-        '${selectedDate.year}';
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, dialogSetState) {
-            return AlertDialog(
-              title: const Text('Add Medical Record'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Record Title *',
-                        hintText: 'e.g. Blood Test Report',
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: typeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Record Type *',
-                        hintText: 'e.g. Lab Report',
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: doctorController,
-                      decoration: const InputDecoration(
-                        labelText: 'Doctor Name (Optional)',
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.calendar_month,
-                        color: recordTeal,
-                      ),
-                      title: const Text('Record Date'),
-                      subtitle: Text(formattedDate),
-                      trailing: const Icon(
-                        Icons.edit_calendar,
-                      ),
-                      onTap: () async {
-                        final pickedDate = await showDatePicker(
-                          context: dialogContext,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime.now(),
-                        );
-
-                        if (pickedDate != null) {
-                          dialogSetState(() {
-                            selectedDate = pickedDate;
-
-                            formattedDate =
-                            '${selectedDate.day} '
-                                '${_monthName(selectedDate.month)} '
-                                '${selectedDate.year}';
-                          });
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: notesController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes (Optional)',
-                        hintText: 'Enter additional details',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Cancel'),
-                ),
-
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: recordTeal,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    if (titleController.text.trim().isEmpty ||
-                        typeController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Please enter title and record type',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    setState(() {
-                      records.insert(0, {
-                        'title': titleController.text.trim(),
-                        'type': typeController.text.trim(),
-                        'date': formattedDate,
-                        'doctor': doctorController.text.trim().isEmpty
-                            ? 'Not specified'
-                            : doctorController.text.trim(),
-                        'notes': notesController.text.trim().isEmpty
-                            ? 'No notes'
-                            : notesController.text.trim(),
-                      });
-                    });
-
-                    Navigator.pop(dialogContext);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Medical record added'),
-                      ),
-                    );
-                  },
-                  child: const Text('Add Record'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    titleController.dispose();
-    typeController.dispose();
-    doctorController.dispose();
-    notesController.dispose();
-  }
-
-  // Delete record
-  void deleteRecord(int index) {
-    setState(() {
-      records.removeAt(index);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Medical record deleted'),
-      ),
-    );
-  }
-
-  String _monthName(int month) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-
-    return months[month - 1];
-  }
+  CollectionReference<Map<String, dynamic>> get recordsCollection =>
+      _firestore.collection('medical_records');
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Please login to view medical records.'),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: recordBackground,
+      backgroundColor: medicalBackground,
       appBar: AppBar(
-        backgroundColor: recordBackground,
-        foregroundColor: recordNavy,
+        backgroundColor: medicalNavy,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           'Medical Records',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: medicalTeal,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Record'),
+        onPressed: _addRecord,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(18),
           children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: recordNavy,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.folder_shared_rounded,
-                    color: Colors.white,
-                    size: 38,
-                  ),
+            _buildHeader(),
+            const SizedBox(height: 20),
+            _buildHealthInformation(),
+            const SizedBox(height: 24),
+            _buildRecordsHeading(),
+            const SizedBox(height: 12),
+            _buildRecordsList(),
+            const SizedBox(height: 90),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  const SizedBox(height: 15),
-
-                  const Text(
-                    'Your Health Records',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 21,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    'Manage your health information and '
-                        'medical history in one place.',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: medicalNavy,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white,
+            child: Icon(
+              Icons.folder_shared_outlined,
+              color: medicalTeal,
+              size: 30,
             ),
-
-            const SizedBox(height: 28),
-
-            // Health Information
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Health Information',
+                Text(
+                  'Your Health Records',
                   style: TextStyle(
-                    color: recordNavy,
-                    fontSize: 19,
+                    color: Colors.white,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
-                const Text(
-                  'Tap to edit',
+                SizedBox(height: 5),
+                Text(
+                  'Keep your important health information in one place.',
                   style: TextStyle(
-                    color: recordTeal,
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthInformation() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Personal Health Information',
+          style: TextStyle(
+            color: medicalNavy,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: userDocument.snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return _errorCard(
+                'Could not load health information.',
+              );
+            }
+
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: medicalTeal,
+                ),
+              );
+            }
+
+            final data = snapshot.data?.data() ?? {};
+            final medicalInfo =
+            Map<String, dynamic>.from(
+              data['medicalInfo'] ?? {},
+            );
+
+            final items = [
+              {
+                'title': 'Blood Group',
+                'icon': Icons.bloodtype_outlined,
+                'value': medicalInfo['Blood Group'] ?? 'Not added',
+              },
+              {
+                'title': 'Allergies',
+                'icon': Icons.warning_amber_rounded,
+                'value': medicalInfo['Allergies'] ?? 'Not added',
+              },
+              {
+                'title': 'Medications',
+                'icon': Icons.medication_outlined,
+                'value': medicalInfo['Medications'] ?? 'Not added',
+              },
+              {
+                'title': 'Medical Conditions',
+                'icon': Icons.health_and_safety_outlined,
+                'value':
+                medicalInfo['Medical Conditions'] ?? 'Not added',
+              },
+            ];
+
+            return Column(
+              children: items.map((item) {
+                return _healthInfoCard(
+                  title: item['title'] as String,
+                  icon: item['icon'] as IconData,
+                  value: item['value'].toString(),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _healthInfoCard({
+    required String title,
+    required IconData icon,
+    required String value,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 15,
+        vertical: 14,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: medicalTeal.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: medicalTeal),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: medicalNavy,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Edit $title',
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: medicalTeal,
+            ),
+            onPressed: () => _editHealthInfo(title, value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordsHeading() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Medical Documents',
+          style: TextStyle(
+            color: medicalNavy,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          'Saved in Firebase',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecordsList() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: recordsCollection
+          .where('patientId', isEqualTo: userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _errorCard(
+            'Could not load records. Please check your internet connection and Firestore rules.',
+          );
+        }
+
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(25),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: medicalTeal,
+              ),
+            ),
+          );
+        }
+
+        final documents = snapshot.data?.docs ?? [];
+
+        if (documents.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.folder_open_outlined,
+                  size: 45,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'No medical records yet',
+                  style: TextStyle(
+                    color: medicalNavy,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Tap Add Record to save your first record.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final sortedDocuments = [...documents];
+
+        sortedDocuments.sort((a, b) {
+          final aDate = _getDate(a.data()['recordDate']);
+          final bDate = _getDate(b.data()['recordDate']);
+          return bDate.compareTo(aDate);
+        });
+
+        return Column(
+          children: sortedDocuments.map((document) {
+            final record = document.data();
+
+            return _recordCard(
+              recordId: document.id,
+              record: record,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _recordCard({
+    required String recordId,
+    required Map<String, dynamic> record,
+  }) {
+    final title = record['title']?.toString() ?? 'Medical Record';
+    final type = record['type']?.toString() ?? 'Other';
+    final doctor = record['doctor']?.toString() ?? 'Not specified';
+    final date = _formatDate(record['recordDate']);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: medicalTeal.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _recordIcon(type),
+              color: medicalTeal,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: medicalNavy,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '$type • $date',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Doctor: $doctor',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 15),
-
-            Row(
-              children: [
-                Expanded(
-                  child: healthInfoCard(
-                    'Blood Group',
-                    healthInfo['Blood Group']!,
-                    Icons.bloodtype_rounded,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: healthInfoCard(
-                    'Allergies',
-                    healthInfo['Allergies']!,
-                    Icons.warning_amber_rounded,
-                  ),
-                ),
-              ],
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: medicalNavy,
             ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: healthInfoCard(
-                    'Medications',
-                    healthInfo['Medications']!,
-                    Icons.medication_rounded,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: healthInfoCard(
-                    'Medical Conditions',
-                    healthInfo['Medical Conditions']!,
-                    Icons.health_and_safety_rounded,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 28),
-
-            // Recent Records
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Recent Records',
-                  style: TextStyle(
-                    color: recordNavy,
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                Text(
-                  '${records.length} Records',
-                  style: const TextStyle(
-                    color: recordTeal,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 15),
-
-            if (records.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(
-                      Icons.folder_open_rounded,
-                      size: 45,
-                      color: recordTeal,
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'No medical records yet',
-                      style: TextStyle(
-                        color: recordNavy,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Add your first medical record below.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
+            onSelected: (value) {
+              if (value == 'view') {
+                _viewRecord(record);
+              } else if (value == 'delete') {
+                _deleteRecord(recordId);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'view',
+                child: Text('View Details'),
               ),
-
-            ...records.asMap().entries.map((entry) {
-              final index = entry.key;
-              final record = entry.value;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                        color: recordTeal.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.description_rounded,
-                        color: recordTeal,
-                        size: 27,
-                      ),
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            record['title']!,
-                            style: const TextStyle(
-                              color: recordNavy,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            record['type']!,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            record['date']!,
-                            style: const TextStyle(
-                              color: recordTeal,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          deleteRecord(index);
-                        }
-
-                        if (value == 'details') {
-                          showRecordDetails(record);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'details',
-                          child: Text('View Details'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Delete Record'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            const SizedBox(height: 15),
-
-            // Add Record Button
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton.icon(
-                onPressed: addRecord,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Medical Record'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: recordTeal,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text('Delete Record'),
               ),
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              'Demo information is stored temporarily '
-                  'and is not saved to an online account.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Health information card
-  Widget healthInfoCard(
-      String title,
-      String value,
-      IconData icon,
-      ) {
-    return GestureDetector(
-      onTap: () {
-        editHealthInfo(title);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: recordTeal,
-              size: 27,
-            ),
-
-            const SizedBox(height: 12),
-
-            Text(
-              title,
-              style: const TextStyle(
-                color: recordNavy,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            const SizedBox(height: 5),
-
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              'Edit',
-              style: TextStyle(
-                color: recordTeal,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // View record details
-  void showRecordDetails(Map<String, String> record) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(record['title']!),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Type: ${record['type']}'),
-              const SizedBox(height: 8),
-              Text('Date: ${record['date']}'),
-              const SizedBox(height: 8),
-              Text('Doctor: ${record['doctor']}'),
-              const SizedBox(height: 8),
-              Text('Notes: ${record['notes']}'),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editHealthInfo(
+      String title,
+      String currentValue,
+      ) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return EditHealthInfoDialog(
+          title: title,
+          currentValue:
+          currentValue == 'Not added' ? '' : currentValue,
+        );
+      },
+    );
+
+    if (!mounted || result == null) return;
+
+    try {
+      await userDocument.set({
+        'medicalInfo': {title: result},
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$title updated successfully'),
+          backgroundColor: medicalTeal,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save health information: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _addRecord() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return const AddMedicalRecordDialog();
+      },
+    );
+
+    if (!mounted || result == null) return;
+
+    try {
+      await recordsCollection.add({
+        'patientId': userId,
+        'title': result['title'],
+        'type': result['type'],
+        'doctor': result['doctor'],
+        'notes': result['notes'],
+        'recordDate': Timestamp.fromDate(
+          result['recordDate'] as DateTime,
+        ),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Medical record saved successfully'),
+          backgroundColor: medicalTeal,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not add record: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteRecord(String recordId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Medical Record'),
+          content: const Text(
+            'Are you sure you want to delete this record?',
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Close'),
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(true),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         );
       },
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    try {
+      await recordsCollection.doc(recordId).delete();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Medical record deleted'),
+          backgroundColor: medicalTeal,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete record: $e')),
+      );
+    }
+  }
+
+  void _viewRecord(Map<String, dynamic> record) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            record['title']?.toString() ?? 'Medical Record',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _detailRow(
+                  'Type',
+                  record['type']?.toString() ?? 'Other',
+                ),
+                _detailRow(
+                  'Date',
+                  _formatDate(record['recordDate']),
+                ),
+                _detailRow(
+                  'Doctor',
+                  record['doctor']?.toString() ??
+                      'Not specified',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Notes',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: medicalNavy,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  record['notes']?.toString().trim().isNotEmpty ==
+                      true
+                      ? record['notes'].toString()
+                      : 'No notes added.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(color: medicalTeal),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 75,
+            child: Text(
+              '$title:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: medicalNavy,
+              ),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorCard(String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.red),
+      ),
+    );
+  }
+
+  IconData _recordIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'lab report':
+      case 'test report':
+        return Icons.biotech_outlined;
+      case 'prescription':
+        return Icons.medication_outlined;
+      case 'scan':
+      case 'x-ray':
+        return Icons.image_outlined;
+      case 'discharge summary':
+        return Icons.description_outlined;
+      default:
+        return Icons.folder_outlined;
+    }
+  }
+
+  DateTime _getDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return DateTime(2000);
+  }
+
+  String _formatDate(dynamic value) {
+    final date = _getDate(value);
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+}
+
+// ------------------------------------------------------------
+// Separate dialog widget for editing health information.
+// The TextEditingController is disposed by this widget's State.
+// ------------------------------------------------------------
+
+class EditHealthInfoDialog extends StatefulWidget {
+  final String title;
+  final String currentValue;
+
+  const EditHealthInfoDialog({
+    super.key,
+    required this.title,
+    required this.currentValue,
+  });
+
+  @override
+  State<EditHealthInfoDialog> createState() =>
+      _EditHealthInfoDialogState();
+}
+
+class _EditHealthInfoDialogState
+    extends State<EditHealthInfoDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.currentValue,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Edit ${widget.title}'),
+      content: TextField(
+        controller: _controller,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: 'Enter ${widget.title.toLowerCase()}',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: medicalTeal,
+              width: 2,
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: medicalTeal,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.of(context).pop(
+              _controller.text.trim(),
+            );
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// Separate dialog widget for adding a medical record.
+// ------------------------------------------------------------
+
+class AddMedicalRecordDialog extends StatefulWidget {
+  const AddMedicalRecordDialog({super.key});
+
+  @override
+  State<AddMedicalRecordDialog> createState() =>
+      _AddMedicalRecordDialogState();
+}
+
+class _AddMedicalRecordDialogState
+    extends State<AddMedicalRecordDialog> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _titleController = TextEditingController();
+  final _doctorController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  String _selectedType = 'Lab Report';
+  DateTime _selectedDate = DateTime.now();
+
+  final List<String> _recordTypes = [
+    'Lab Report',
+    'Prescription',
+    'Scan',
+    'X-Ray',
+    'Discharge Summary',
+    'Other',
+  ];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _doctorController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+
+    if (!mounted || selected == null) return;
+
+    setState(() {
+      _selectedDate = selected;
+    });
+  }
+
+  void _saveRecord() {
+    if (!_formKey.currentState!.validate()) return;
+
+    Navigator.of(context).pop({
+      'title': _titleController.text.trim(),
+      'type': _selectedType,
+      'doctor': _doctorController.text.trim(),
+      'notes': _notesController.text.trim(),
+      'recordDate': _selectedDate,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Add Medical Record',
+        style: TextStyle(
+          color: medicalNavy,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  decoration: _inputDecoration('Record Title'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a title';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _selectedType,
+                  decoration: _inputDecoration('Record Type'),
+                  items: _recordTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(type),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _selectedType = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _doctorController,
+                  decoration: _inputDecoration('Doctor Name'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  decoration: _inputDecoration('Notes'),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey.shade400,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          color: medicalTeal,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Date: ${_selectedDate.day.toString().padLeft(2, '0')}/'
+                              '${_selectedDate.month.toString().padLeft(2, '0')}/'
+                              '${_selectedDate.year}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: medicalTeal,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _saveRecord,
+          child: const Text('Save Record'),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: medicalTeal,
+          width: 2,
+        ),
+      ),
     );
   }
 }

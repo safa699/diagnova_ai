@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:diagnova_ai/screens/appointment_booking_screen.dart';
 
 const Color doctorNavy = Color(0xFF102A43);
@@ -21,45 +23,6 @@ class _DoctorFinderScreenState
 
   String selectedSpecialty = 'All';
 
-  final List<Map<String, dynamic>> doctors = [
-    {
-      'name': 'Dr. Sarah Ahmed',
-      'specialty': 'General Physician',
-      'experience': '8 years experience',
-      'rating': '4.9',
-      'fee': '1500',
-      'image':
-      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
-    },
-    {
-      'name': 'Dr. Ali Hassan',
-      'specialty': 'Cardiologist',
-      'experience': '10 years experience',
-      'rating': '4.8',
-      'fee': '2500',
-      'image':
-      'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-    },
-    {
-      'name': 'Dr. Ayesha Khan',
-      'specialty': 'Dermatologist',
-      'experience': '6 years experience',
-      'rating': '4.7',
-      'fee': '2000',
-      'image':
-      'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400',
-    },
-    {
-      'name': 'Dr. Usman Malik',
-      'specialty': 'Neurologist',
-      'experience': '12 years experience',
-      'rating': '4.9',
-      'fee': '3000',
-      'image':
-      'https://images.unsplash.com/photo-1622253692010-333f2da6031b?w=400',
-    },
-  ];
-
   final List<String> specialties = [
     'All',
     'General Physician',
@@ -68,17 +31,30 @@ class _DoctorFinderScreenState
     'Neurologist',
   ];
 
-  List<Map<String, dynamic>> get filteredDoctors {
+  // Firestore se doctors load honge
+  final Stream<QuerySnapshot<Map<String, dynamic>>>
+  doctorsStream = FirebaseFirestore.instance
+      .collection('doctors')
+      .snapshots();
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> filterDoctors(
+      List<Map<String, dynamic>> doctors) {
+    final search =
+    searchController.text.toLowerCase().trim();
+
     return doctors.where((doctor) {
-      final name = doctor['name']
-          .toString()
-          .toLowerCase();
+      final name =
+      (doctor['name'] ?? '').toString().toLowerCase();
 
-      final specialty = doctor['specialty']
+      final specialty =
+      (doctor['specialty'] ?? '')
           .toString()
-          .toLowerCase();
-
-      final search = searchController.text
           .toLowerCase();
 
       final matchesSearch =
@@ -94,15 +70,10 @@ class _DoctorFinderScreenState
   }
 
   @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: doctorBackground,
+
       appBar: AppBar(
         backgroundColor: doctorNavy,
         foregroundColor: Colors.white,
@@ -114,9 +85,11 @@ class _DoctorFinderScreenState
           ),
         ),
       ),
+
       body: SafeArea(
         child: Column(
           children: [
+            // Header and search
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -127,6 +100,7 @@ class _DoctorFinderScreenState
                   bottomRight: Radius.circular(28),
                 ),
               ),
+
               child: Column(
                 crossAxisAlignment:
                 CrossAxisAlignment.start,
@@ -139,7 +113,9 @@ class _DoctorFinderScreenState
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   const Text(
                     'Book your appointment with trusted specialists.',
                     style: TextStyle(
@@ -147,24 +123,32 @@ class _DoctorFinderScreenState
                       fontSize: 14,
                     ),
                   ),
+
                   const SizedBox(height: 20),
 
                   TextField(
                     controller: searchController,
+
                     onChanged: (value) {
                       setState(() {});
                     },
+
                     style: const TextStyle(
                       color: doctorNavy,
                     ),
+
                     decoration: InputDecoration(
-                      hintText: 'Search doctor or specialty',
+                      hintText:
+                      'Search doctor or specialty',
+
                       prefixIcon: const Icon(
                         Icons.search,
                         color: doctorTeal,
                       ),
+
                       filled: true,
                       fillColor: Colors.white,
+
                       border: OutlineInputBorder(
                         borderRadius:
                         BorderRadius.circular(15),
@@ -178,14 +162,19 @@ class _DoctorFinderScreenState
 
             const SizedBox(height: 18),
 
+            // Specialty filters
             SizedBox(
               height: 42,
+
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
+
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                 ),
+
                 itemCount: specialties.length,
+
                 itemBuilder: (context, index) {
                   final specialty = specialties[index];
 
@@ -196,17 +185,22 @@ class _DoctorFinderScreenState
                     padding: const EdgeInsets.only(
                       right: 8,
                     ),
+
                     child: ChoiceChip(
                       label: Text(specialty),
+
                       selected: isSelected,
+
                       selectedColor: doctorTeal,
                       backgroundColor: Colors.white,
+
                       labelStyle: TextStyle(
                         color: isSelected
                             ? Colors.white
                             : doctorNavy,
                         fontWeight: FontWeight.w600,
                       ),
+
                       onSelected: (selected) {
                         setState(() {
                           selectedSpecialty = specialty;
@@ -220,35 +214,178 @@ class _DoctorFinderScreenState
 
             const SizedBox(height: 12),
 
+            // Firestore doctors list
             Expanded(
-              child: filteredDoctors.isEmpty
-                  ? const Center(
-                child: Text(
-                  'No doctors found.',
-                  style: TextStyle(
-                    color: doctorNavy,
-                    fontSize: 16,
-                  ),
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filteredDoctors.length,
-                itemBuilder: (context, index) {
-                  final doctor =
-                  filteredDoctors[index];
+              child: StreamBuilder<
+                  QuerySnapshot<Map<String, dynamic>>>(
+                stream: doctorsStream,
 
-                  return DoctorCard(
-                    doctor: doctor,
-                    onBook: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AppointmentBookingScreen(
-                                doctor: doctor,
+                builder: (context, snapshot) {
+                  // Loading
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: doctorTeal,
+                      ),
+                    );
+                  }
+
+                  // Error
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+
+                        child: Column(
+                          mainAxisAlignment:
+                          MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 45,
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            const Text(
+                              'Unable to load doctors.',
+                              style: TextStyle(
+                                color: doctorNavy,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            const Text(
+                              'Please check your internet connection '
+                                  'and Firestore permissions.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {});
+                              },
+
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: doctorTeal,
+                                foregroundColor: Colors.white,
+                              ),
+
+                              child: const Text('Retry'),
+                            ),
+                          ],
                         ),
+                      ),
+                    );
+                  }
+
+                  final documents =
+                      snapshot.data?.docs ?? [];
+
+                  // Firestore data ko maps mein convert karna
+                  final doctors =
+                  documents.map((document) {
+                    final data = document.data();
+
+                    return <String, dynamic>{
+                      ...data,
+                      'id': document.id,
+                    };
+                  }).toList();
+
+                  final filteredDoctors =
+                  filterDoctors(doctors);
+
+                  // Database empty
+                  if (doctors.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+
+                        child: Column(
+                          mainAxisAlignment:
+                          MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.medical_services_outlined,
+                              size: 60,
+                              color: doctorTeal,
+                            ),
+
+                            SizedBox(height: 16),
+
+                            Text(
+                              'No doctors added yet.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: doctorNavy,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            SizedBox(height: 8),
+
+                            Text(
+                              'Add doctor documents in your '
+                                  'Firestore doctors collection.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Search/filter empty
+                  if (filteredDoctors.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No doctors found.',
+                        style: TextStyle(
+                          color: doctorNavy,
+                          fontSize: 16,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+
+                    itemCount: filteredDoctors.length,
+
+                    itemBuilder: (context, index) {
+                      final doctor =
+                      filteredDoctors[index];
+
+                      return DoctorCard(
+                        doctor: doctor,
+
+                        onBook: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  AppointmentBookingScreen(
+                                    doctor: doctor,
+                                  ),
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -274,12 +411,17 @@ class DoctorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl =
+    (doctor['image'] ?? '').toString();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(15),
+
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+
         boxShadow: [
           BoxShadow(
             color: doctorNavy.withOpacity(0.06),
@@ -288,34 +430,31 @@ class DoctorCard extends StatelessWidget {
           ),
         ],
       ),
+
       child: Column(
         children: [
           Row(
             crossAxisAlignment:
             CrossAxisAlignment.start,
+
             children: [
               ClipRRect(
                 borderRadius:
                 BorderRadius.circular(15),
-                child: Image.network(
-                  doctor['image'].toString(),
+
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                  imageUrl,
                   width: 85,
                   height: 100,
                   fit: BoxFit.cover,
+
                   errorBuilder:
                       (context, error, stackTrace) {
-                    return Container(
-                      width: 85,
-                      height: 100,
-                      color: const Color(0xFFEAF3F5),
-                      child: const Icon(
-                        Icons.person,
-                        size: 45,
-                        color: doctorTeal,
-                      ),
-                    );
+                    return doctorPlaceholder();
                   },
-                ),
+                )
+                    : doctorPlaceholder(),
               ),
 
               const SizedBox(width: 14),
@@ -324,9 +463,12 @@ class DoctorCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.start,
+
                   children: [
                     Text(
-                      doctor['name'].toString(),
+                      (doctor['name'] ?? 'Doctor')
+                          .toString(),
+
                       style: const TextStyle(
                         color: doctorNavy,
                         fontSize: 17,
@@ -337,7 +479,9 @@ class DoctorCard extends StatelessWidget {
                     const SizedBox(height: 5),
 
                     Text(
-                      doctor['specialty'].toString(),
+                      (doctor['specialty'] ?? '')
+                          .toString(),
+
                       style: const TextStyle(
                         color: doctorTeal,
                         fontWeight: FontWeight.w600,
@@ -347,7 +491,9 @@ class DoctorCard extends StatelessWidget {
                     const SizedBox(height: 8),
 
                     Text(
-                      doctor['experience'].toString(),
+                      (doctor['experience'] ?? '')
+                          .toString(),
+
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
@@ -363,9 +509,13 @@ class DoctorCard extends StatelessWidget {
                           color: Colors.amber,
                           size: 17,
                         ),
+
                         const SizedBox(width: 4),
+
                         Text(
-                          doctor['rating'].toString(),
+                          (doctor['rating'] ?? 'New')
+                              .toString(),
+
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: doctorNavy,
@@ -384,9 +534,11 @@ class DoctorCard extends StatelessWidget {
           Row(
             mainAxisAlignment:
             MainAxisAlignment.spaceBetween,
+
             children: [
               Text(
-                'Rs. ${doctor['fee']}',
+                'Rs. ${doctor['fee'] ?? '0'}',
+
                 style: const TextStyle(
                   color: doctorNavy,
                   fontSize: 17,
@@ -396,18 +548,22 @@ class DoctorCard extends StatelessWidget {
 
               ElevatedButton(
                 onPressed: onBook,
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: doctorTeal,
                   foregroundColor: Colors.white,
+
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 12,
                   ),
+
                   shape: RoundedRectangleBorder(
                     borderRadius:
                     BorderRadius.circular(12),
                   ),
                 ),
+
                 child: const Text(
                   'Book Appointment',
                 ),
@@ -415,6 +571,20 @@ class DoctorCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget doctorPlaceholder() {
+    return Container(
+      width: 85,
+      height: 100,
+      color: const Color(0xFFEAF3F5),
+
+      child: const Icon(
+        Icons.person,
+        size: 45,
+        color: doctorTeal,
       ),
     );
   }

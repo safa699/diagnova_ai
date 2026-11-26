@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:diagnova_ai/screens/home_screen.dart';
 import 'package:diagnova_ai/screens/signup_screen.dart';
 
@@ -15,10 +17,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController emailController =
+  TextEditingController();
+
+  final TextEditingController passwordController =
+  TextEditingController();
 
   bool hidePassword = true;
+  bool isLoading = false;
+  bool isResetLoading = false;
 
   @override
   void dispose() {
@@ -27,23 +34,146 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void login() {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email and password'),
-        ),
-      );
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: authNavy,
+      ),
+    );
+  }
+
+  // Firebase Login
+  Future<void> login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      showMessage('Please enter your email and password');
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      ),
-    );
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      showMessage('Login successful!');
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+            (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      String message;
+
+      switch (e.code) {
+        case 'invalid-email':
+          message = 'Please enter a valid email address';
+          break;
+
+        case 'user-not-found':
+          message = 'No account found with this email';
+          break;
+
+        case 'wrong-password':
+          message = 'Incorrect password';
+          break;
+
+        case 'invalid-credential':
+          message = 'Incorrect email or password';
+          break;
+
+        case 'user-disabled':
+          message = 'This account has been disabled';
+          break;
+
+        case 'too-many-requests':
+          message = 'Too many attempts. Try again later';
+          break;
+
+        case 'network-request-failed':
+          message = 'Please check your internet connection';
+          break;
+
+        default:
+          message = e.message ?? 'Login failed. Please try again';
+      }
+
+      if (mounted) {
+        showMessage(message);
+      }
+    } catch (e) {
+      if (mounted) {
+        showMessage('Something went wrong. Please try again');
+      }
+
+      debugPrint('Login error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Firebase Forgot Password
+  Future<void> forgotPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      showMessage('Please enter your email address first');
+      return;
+    }
+
+    setState(() {
+      isResetLoading = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: email,
+      );
+
+      if (mounted) {
+        showMessage(
+          'Password reset email sent. Please check your inbox.',
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        if (e.code == 'invalid-email') {
+          showMessage('Please enter a valid email address');
+        } else {
+          showMessage(
+            'Unable to send reset email. Please try again.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showMessage('Something went wrong. Please try again');
+      }
+
+      debugPrint('Password reset error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isResetLoading = false;
+        });
+      }
+    }
   }
 
   Widget buildInput({
@@ -53,6 +183,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return TextField(
       controller: controller,
+      keyboardType: isPassword
+          ? TextInputType.text
+          : TextInputType.emailAddress,
       obscureText: isPassword && hidePassword,
       style: const TextStyle(
         fontSize: 18,
@@ -231,16 +364,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Password recovery will be available soon.',
-                                  ),
-                                ),
-                              );
-                            },
-                            child: const Text(
+                            onPressed:
+                            isResetLoading ? null : forgotPassword,
+                            child: isResetLoading
+                                ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: authTeal,
+                              ),
+                            )
+                                : const Text(
                               'Forgot Password?',
                               style: TextStyle(
                                 color: authTeal,
@@ -252,20 +387,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 15),
 
+                        // Login Button
                         SizedBox(
                           width: double.infinity,
                           height: 58,
                           child: ElevatedButton(
-                            onPressed: login,
+                            onPressed: isLoading ? null : login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: authTeal,
                               foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                              authTeal.withOpacity(0.6),
                               elevation: 3,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
+                                borderRadius:
+                                BorderRadius.circular(9),
                               ),
                             ),
-                            child: const Text(
+                            child: isLoading
+                                ? const SizedBox(
+                              height: 25,
+                              width: 25,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                                : const Text(
                               'Login',
                               style: TextStyle(
                                 fontSize: 19,

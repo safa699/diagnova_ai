@@ -1,5 +1,8 @@
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:diagnova_ai/screens/login_screen.dart';
 import 'package:diagnova_ai/screens/home_screen.dart';
 
@@ -23,6 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool hidePassword = true;
   bool hideConfirmPassword = true;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -87,14 +91,17 @@ class _SignupScreenState extends State<SignupScreen> {
           onPressed: () {
             setState(() {
               if (isConfirmPassword) {
-                hideConfirmPassword = !hideConfirmPassword;
+                hideConfirmPassword =
+                !hideConfirmPassword;
               } else {
                 hidePassword = !hidePassword;
               }
             });
           },
           icon: Icon(
-            hide ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            hide
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
             color: signupTeal,
           ),
         )
@@ -103,59 +110,143 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  void createAccount() {
-    if (nameController.text.trim().isEmpty ||
-        emailController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
-        passwordController.text.isEmpty ||
-        confirmPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill all fields'),
-        ),
-      );
-      return;
-    }
-
-    if (!emailController.text.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid email address'),
-        ),
-      );
-      return;
-    }
-
-    if (passwordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password must be at least 6 characters'),
-        ),
-      );
-      return;
-    }
-
-    if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-        ),
-      );
-      return;
-    }
-
+  void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created successfully!'),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: signupNavy,
       ),
     );
+  }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      ),
-    );
+  Future<void> createAccount() async {
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+    final phone = phoneController.text.trim();
+    final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    // Check empty fields
+    if (name.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      showMessage('Please fill all fields');
+      return;
+    }
+
+    // Check email
+    if (!email.contains('@') || !email.contains('.')) {
+      showMessage('Please enter a valid email address');
+      return;
+    }
+
+    // Check password length
+    if (password.length < 6) {
+      showMessage('Password must be at least 6 characters');
+      return;
+    }
+
+    // Check confirm password
+    if (password != confirmPassword) {
+      showMessage('Passwords do not match');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // 1. Create account in Firebase Authentication
+      final UserCredential userCredential =
+      await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final User? user = userCredential.user;
+
+      if (user == null) {
+        showMessage('Account could not be created');
+        return;
+      }
+
+      // 2. Save user profile in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'uid': user.uid,
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Update Firebase display name
+      await user.updateDisplayName(name);
+
+      if (!mounted) return;
+
+      showMessage('Account created successfully!');
+
+      // 4. Navigate to Home
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+            (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      String message;
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'This email is already registered';
+          break;
+
+        case 'invalid-email':
+          message = 'Please enter a valid email address';
+          break;
+
+        case 'weak-password':
+          message = 'Please choose a stronger password';
+          break;
+
+        case 'network-request-failed':
+          message = 'Check your internet connection';
+          break;
+
+        case 'operation-not-allowed':
+          message = 'Email/Password login is not enabled in Firebase';
+          break;
+
+        default:
+          message = e.message ?? 'Signup failed. Please try again';
+      }
+
+      if (mounted) {
+        showMessage(message);
+      }
+    } catch (e) {
+      if (mounted) {
+        showMessage(
+          'Something went wrong. Please try again.',
+        );
+      }
+
+      debugPrint('Signup error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -312,20 +403,34 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         const SizedBox(height: 32),
 
+                        // Create Account Button
                         SizedBox(
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: createAccount,
+                            onPressed:
+                            isLoading ? null : createAccount,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: signupTeal,
                               foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                              signupTeal.withOpacity(0.6),
                               elevation: 3,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
+                                borderRadius:
+                                BorderRadius.circular(9),
                               ),
                             ),
-                            child: const Text(
+                            child: isLoading
+                                ? const SizedBox(
+                              height: 25,
+                              width: 25,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                                : const Text(
                               'Create Account',
                               style: TextStyle(
                                 fontSize: 18,
